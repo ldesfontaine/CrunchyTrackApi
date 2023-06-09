@@ -7,29 +7,11 @@ app = Flask(__name__)
 def isJson():
     try:
         if request.is_json:
-            get_data()
-            checkJsonFile()
-            write_data()
-            return data_with_timestamp, 200
+            return  200
         else:
             return "Erreur 400: Requête incorrecte - Format JSON requis", 400
     except:
         return "Erreur interne du serveur", 500
-
-
-def get_data():
-    global data_with_timestamp
-    try:
-        data = request.get_json()
-        data_without_name = data["data"]
-        data_with_timestamp = {
-            "timestamp": datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
-            "username": data["username"],
-            "data": data_without_name
-        }
-    except:
-        raise ValueError("Erreur 400: Requête incorrecte - Données JSON invalides")
-
 
 def checkJsonFile():
     try:
@@ -42,7 +24,16 @@ def checkJsonFile():
     except:
         raise ValueError("Erreur interne du serveur")
 
+def get_data():
+    global username, anime_title, episode_name, episode_number, episode_link
+    data = request.get_json()
 
+    # On récupère les infos nécessaires
+    username = data["username"]
+    anime_title = "Anime"
+    episode_name = data["data"]["Anime"]["Title"]
+    episode_number = data["data"]["Anime"]["EpisodeNumber"]
+    episode_link = data["data"]["Anime"]["EpisodeLink"]
 
 def write_data():
     try:
@@ -50,23 +41,14 @@ def write_data():
         if not data:
             return "Erreur 400: Requête incorrecte - Données JSON manquantes", 400
 
-        username = data["username"]
-        anime_title = "Anime"
-        episode_name = data["data"]["Anime"]["Title"]
-        episode_number = data["data"]["Anime"]["EpisodeNumber"]
-        episode_link = data["data"]["Anime"]["EpisodeLink"]
+        # On récupère les infos nécessaires
+        get_data()
 
         # Vérifier si le fichier save.json existe
-        if not os.path.exists("save.json"):
-            with open("save.json", "w") as file:
-                file.write("{}")
+        checkJsonFile()
 
         with open("save.json", "r+") as file:
             content = json.load(file)
-
-            # Vérifier si le contenu du fichier est vide
-            if not content:
-                content = {}
 
             # Vérifier si l'utilisateur existe déjà dans le fichier
             if username in content:
@@ -83,7 +65,8 @@ def write_data():
             # Mettre à jour les informations de l'épisode existant ou ajouter un nouvel épisode
             anime_data[episode_name] = {
                 "EpisodeNumber": episode_number,
-                "EpisodeLink": episode_link
+                "EpisodeLink": episode_link,
+                "LastUpdate": datetime.now().strftime("%d/%m/%Y %H:%M:%S")
             }
 
             # Mettre à jour les données de l'utilisateur dans le fichier
@@ -105,10 +88,10 @@ def write_data():
 @app.route('/save', methods=['POST'])
 def save():
     try:
-        result, status_code = isJson()
-        final_result = result, status_code
-        # print(final_result)
-        return final_result
+        isJson()
+        checkJsonFile()
+        write_data()
+        return "Données enregistrées avec succès", 200
     except ValueError as e:
         return str(e), 400
     except Exception:
