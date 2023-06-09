@@ -13,7 +13,7 @@ def isJson():
     except:
         return "Erreur interne du serveur", 500
 
-def checkJsonFile():
+def isExist():
     try:
         if not os.path.exists("save.json") or os.stat("save.json").st_size == 0:
             with open("save.json", "w") as file:
@@ -25,15 +25,8 @@ def checkJsonFile():
         raise ValueError("Erreur interne du serveur")
 
 def get_data():
-    global username, anime_title, episode_name, episode_number, episode_link
+    global data
     data = request.get_json()
-
-    # On récupère les infos nécessaires
-    username = data["username"]
-    anime_title = "Anime"
-    episode_name = data["data"]["Anime"]["Title"]
-    episode_number = data["data"]["Anime"]["EpisodeNumber"]
-    episode_link = data["data"]["Anime"]["EpisodeLink"]
 
 def write_data():
     try:
@@ -45,38 +38,44 @@ def write_data():
         get_data()
 
         # Vérifier si le fichier save.json existe
-        checkJsonFile()
+        isExist()
 
-        with open("save.json", "r+") as file:
+        with open("save.json", "r+", encoding='utf-8') as file:
             content = json.load(file)
 
-            # Vérifier si l'utilisateur existe déjà dans le fichier
-            if username in content:
-                user_data = content[username]
-            else:
-                user_data = {}
+            for entry in data["data"]:
+                anime_title = entry["Anime"]["Title"]
+                episode_name = entry["Anime"]["EpisodeName"]
+                episode_number = entry["Anime"]["EpisodeNumber"]
+                episode_link = entry["Anime"]["EpisodeLink"]
 
-            # Vérifier si l'anime title existe déjà pour cet utilisateur
-            if anime_title in user_data:
-                anime_data = user_data[anime_title]
-            else:
-                anime_data = {}
+                # Vérifie si l'utilisateur existe déjà
+                if data["username"] in content:
+                    user_data = content[data["username"]]
+                else:
+                    user_data = {}
 
-            # Mettre à jour les informations de l'épisode existant ou ajouter un nouvel épisode
-            anime_data[episode_name] = {
-                "EpisodeNumber": episode_number,
-                "EpisodeLink": episode_link,
-                "LastUpdate": datetime.now().strftime("%d/%m/%Y %H:%M:%S")
-            }
+                # Vérifie si l'anime title existe déjà pour cet user
+                if anime_title in user_data:
+                    anime_data = user_data[anime_title]
+                else:
+                    anime_data = {}
 
-            # Mettre à jour les données de l'utilisateur dans le fichier
-            user_data[anime_title] = anime_data
-            content[username] = user_data
+                # Update les informations de l'épisode existant ou ajouter un nouvel épisode avec heure de mise à jour
+                anime_data[episode_name] = {
+                    "EpisodeNumber": episode_number,
+                    "EpisodeLink": episode_link,
+                    "LastUpdate": datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+                }
+
+                # Mets à jour les données de l'utilisateur
+                user_data[anime_title] = anime_data
+                content[data["username"]] = user_data
 
             # Réécrire le contenu du fichier avec les données mises à jour
             file.seek(0)
             file.truncate()
-            json.dump(content, file, indent=4)
+            json.dump(content, file, ensure_ascii=False, indent=4)
 
         return "Données enregistrées avec succès", 200
 
@@ -89,7 +88,6 @@ def write_data():
 def save():
     try:
         isJson()
-        checkJsonFile()
         write_data()
         return "Données enregistrées avec succès", 200
     except ValueError as e:
