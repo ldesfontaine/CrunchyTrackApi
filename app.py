@@ -19,10 +19,10 @@ def save_data():
         }
         if os.path.exists("save.json"):
             with open("save.json", "a") as f:
-                f.write(json.dumps(data_with_timestamp) + "\n")
+                f.write(json.dumps(data_with_timestamp,indent=4))
         else:
             with open("save.json", "w") as f:
-                f.write(json.dumps(data_with_timestamp) + "\n")
+                f.write(json.dumps(data_with_timestamp,indent=4))
         return "OK", 200
     except:
         return "404", 404
