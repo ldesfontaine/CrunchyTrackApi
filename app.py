@@ -28,6 +28,37 @@ def get_data():
     global data
     data = request.get_json()
 
+def dataIsConform():
+    try:
+        data = request.get_json()
+        if not data:
+            return "Erreur 400: Requête incorrecte - Données JSON manquantes", 400
+
+        for entry in data["data"]:
+            anime = entry.get("Anime")
+            if not anime or not isinstance(anime, dict):
+                return "Erreur 400: Requête incorrecte - Champ 'Anime' manquant ou invalide", 400
+
+            if not isinstance(anime.get("Title"), str):
+                return "Erreur 400: Requête incorrecte - Champ 'Title' doit être une chaîne de caractères", 400
+
+            if not isinstance(anime.get("EpisodeName"), str):
+                return "Erreur 400: Requête incorrecte - Champ 'EpisodeName' doit être une chaîne de caractères", 400
+
+            episode_number = anime.get("EpisodeNumber")
+            if not isinstance(episode_number, int) and not episode_number.isdigit():
+                return "Erreur 400: Requête incorrecte - Champ 'EpisodeNumber' doit être un entier", 400
+
+            if not isinstance(anime.get("EpisodeLink"), str):
+                return "Erreur 400: Requête incorrecte - Champ 'EpisodeLink' doit être une chaîne de caractères", 400
+
+        return None
+
+    except Exception as e:
+        return "Erreur interne du serveur", 500
+
+
+
 def write_data():
     try:
         data = request.get_json()
@@ -72,7 +103,7 @@ def write_data():
                 user_data[anime_title] = anime_data
                 content[data["username"]] = user_data
 
-            # Réécrire le contenu du fichier avec les données mises à jour
+            # Réécrire le contenu du fichier avec les données mises à jour!!
             file.seek(0)
             file.truncate()
             json.dump(content, file, ensure_ascii=False, indent=4)
@@ -88,10 +119,48 @@ def write_data():
 def save():
     try:
         isJson()
+
+        error = dataIsConform()
+        if error:
+            return error
+
         write_data()
         return "Données enregistrées avec succès", 200
+
     except ValueError as e:
         return str(e), 400
+    except Exception:
+        return "Erreur interne du serveur", 500
+
+
+# ---------------------------------------------------GET---------------------------------------------------
+@app.route('/get', methods=['GET'])
+def get():
+    try:
+        isExist()
+
+        with open("save.json", "r", encoding='utf-8') as file:
+            content = json.load(file)
+            return jsonify(content), 200
+
+    except Exception:
+        return "Erreur interne du serveur", 500
+
+
+# -------------------------------------------------GETById-------------------------------------------------
+@app.route('/get/<username>', methods=['GET'])
+def getById(username):
+    try:
+        isExist()
+
+        with open("save.json", "r", encoding='utf-8') as file:
+            content = json.load(file)
+
+            if username in content:
+                return jsonify(content[username]), 200
+            else:
+                return "Erreur 404: Utilisateur non trouvé", 404
+
     except Exception:
         return "Erreur interne du serveur", 500
 
