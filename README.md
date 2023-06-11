@@ -5,7 +5,7 @@
 ### POST
 - Avec l'url ``` /save ```, vous pouvez envoyer via la méthode POST un fichier json.
 
-- Le fichier JSon devra être sous ce format :
+- Le fichier JSon envoyé devra être sous ce format :
 #### `Pour un seul anime`
 ```
 {
